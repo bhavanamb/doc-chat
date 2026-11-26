@@ -1,69 +1,123 @@
-import Image from "next/image";
+"use client"; // This page runs in the browser (uses React hooks)
 
-export default function Home() {
+// AI SDK v7: useChat lives in @ai-sdk/react (separate package from "ai").
+import { useChat } from "@ai-sdk/react";
+import { useState, useEffect, useRef } from "react";
+import ChatMessage from "@/components/ChatMessage";
+
+export default function ChatPage() {
+  const {
+    messages, // UIMessage[] — the full conversation history
+    sendMessage, // (msg: { text: string }) => void — sends a message
+    status, // "ready" | "submitted" | "streaming" | "error"
+    stop, // () => void — cancels an in-progress stream
+    error, // Error | undefined — set when the API call fails
+  } = useChat();
+  // useChat() defaults to posting to /api/chat with no extra config needed.
+
+  // AI SDK v7 no longer manages the input field — we do it ourselves.
+  const [input, setInput] = useState("");
+
+  // "submitted" = waiting for first token; "streaming" = tokens arriving
+  const isLoading = status === "submitted" || status === "streaming";
+
+  // Auto-scroll to the bottom whenever a new message arrives
+  const bottomRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  function handleSend(e: React.FormEvent) {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+    sendMessage({ text: input }); // send to the API
+    setInput(""); // clear the input field
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className="flex flex-col h-screen bg-white">
+      {/* ── Header ── */}
+      <header className="border-b border-gray-200 px-6 py-4 flex-shrink-0">
+        <h1 className="text-lg font-semibold text-gray-900">
+          Chat With Your Documents
+        </h1>
+        <p className="text-xs text-gray-400 mt-0.5">
+          Week 1 — streaming chat (documents coming in Week 2)
+        </p>
+      </header>
+
+      {/* ── Message list ── */}
+      <main className="flex-1 overflow-y-auto px-4 py-6">
+        {messages.length === 0 && (
+          <p className="text-center text-gray-400 text-sm mt-16">
+            Ask me anything. In Week 2 you&apos;ll be able to upload PDFs and
+            ask questions about them.
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+        )}
+
+        {messages.map((message) => (
+          <ChatMessage key={message.id} message={message} />
+        ))}
+
+        {/* Loading indicator — three bouncing dots while waiting for the first token */}
+        {isLoading && (
+          <div className="flex justify-start mb-3">
+            <div className="bg-gray-100 rounded-2xl rounded-bl-sm px-4 py-2">
+              <span className="flex gap-1">
+                <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0ms]" />
+                <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:150ms]" />
+                <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:300ms]" />
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Error display */}
+        {error && (
+          <div className="text-center text-red-500 text-sm my-4 p-3 bg-red-50 rounded-lg">
+            Error: {error.message}
+          </div>
+        )}
+
+        <div ref={bottomRef} />
       </main>
+
+      {/* ── Input area ── */}
+      <footer className="border-t border-gray-200 px-4 py-4 flex-shrink-0">
+        <form onSubmit={handleSend} className="flex gap-2 max-w-3xl mx-auto">
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ask a question…"
+            disabled={isLoading}
+            className="flex-1 rounded-xl border border-gray-300 px-4 py-2 text-sm
+                       focus:outline-none focus:ring-2 focus:ring-gray-900
+                       disabled:opacity-50 disabled:cursor-not-allowed"
+          />
+
+          {/* Show Stop button while streaming, Send button otherwise */}
+          {isLoading ? (
+            <button
+              type="button"
+              onClick={stop}
+              className="px-4 py-2 rounded-xl text-sm font-medium
+                         bg-red-500 text-white hover:bg-red-600 transition-colors"
+            >
+              Stop
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={!input.trim()}
+              className="px-4 py-2 rounded-xl text-sm font-medium
+                         bg-gray-900 text-white hover:bg-gray-700 transition-colors
+                         disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Send
+            </button>
+          )}
+        </form>
+      </footer>
     </div>
   );
 }
