@@ -39,8 +39,10 @@ export async function POST(req: Request) {
     const parser = new PDFParse({ data });
     textResult = await parser.getText();
     await parser.destroy();
-  } catch {
-    return Response.json({ error: "Failed to parse PDF." }, { status: 422 });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[upload] pdf parse error:", err);
+    return Response.json({ error: "Failed to parse PDF.", detail: message }, { status: 422 });
   }
 
   return Response.json({

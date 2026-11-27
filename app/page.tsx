@@ -37,13 +37,22 @@ export default function ChatPage() {
   return (
     <div className="flex flex-col h-screen bg-white">
       {/* ── Header ── */}
-      <header className="border-b border-gray-200 px-6 py-4 flex-shrink-0">
-        <h1 className="text-lg font-semibold text-gray-900">
-          Chat With Your Documents
-        </h1>
-        <p className="text-xs text-gray-400 mt-0.5">
-          Week 1 — streaming chat (documents coming in Week 2)
-        </p>
+      <header className="border-b border-gray-200 px-6 py-4 flex-shrink-0 flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold text-gray-900">
+            Chat With Your Documents
+          </h1>
+          <p className="text-xs text-gray-400 mt-0.5">
+            Week 2 — streaming chat + PDF upload
+          </p>
+        </div>
+        <a
+          href="/upload"
+          className="px-4 py-2 rounded-xl text-sm font-medium border border-gray-300
+                     text-gray-700 hover:bg-gray-50 transition-colors"
+        >
+          Upload PDF
+        </a>
       </header>
 
       {/* ── Message list ── */}
